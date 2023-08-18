@@ -1,0 +1,80 @@
+Sub DataImport()
+
+' Deletes WorkingData data
+
+    Sheets("WorkingData").Select
+    Cells.Select
+    Selection.ClearContents
+
+' Imports new data to WorkingData tab
+
+    Dim filename As String
+    filename = ThisWorkbook.Name
+    Dim FileLocation As String
+    FileLocation = Application.GetOpenFilename
+    If FileLocation = "False" Then
+        Beep
+        Exit Sub
+    End If
+    Application.ScreenUpdating = False
+    Set importWorkbook = Workbooks.Open(filename:=FileLocation)
+    importWorkbook.Worksheets(1).Cells.Select
+    Selection.Copy ThisWorkbook.Worksheets("WorkingData").Range("A1")
+    Windows(filename).Activate
+    Sheets("WorkingData").Select
+    Range("A1").Select
+
+' Creates lastRow variable for differences in dataset length
+
+    Dim lastRow As Long
+    lastRow = Cells(Rows.Count, "A").End(xlUp).Row
+    
+' Creates Total Score, Math Score Categorized, Reading Score Categorized, Writing Score Categorized, Total Score Categorized columns
+
+    Range("I1") = "Total Score"
+    Range("I2").Formula = "=SUM($F2:$H2)"
+    Range("J1") = "Math Score Categorized"
+    Range("J2").Formula = "=IF(F2<PERCENTILE(F$2:F$" & lastRow & ",0.33), ""poor"",IF(F2>PERCENTILE(F$2:F$" & lastRow & ",0.66),""good"", ""average""))"
+    Range("K1") = "Reading Score Categorized"
+    Range("K2").Formula = "=IF(G2<PERCENTILE(G$2:G$" & lastRow & ",0.33), ""poor"",IF(G2>PERCENTILE(G$2:G$" & lastRow & ",0.66),""good"", ""average""))"
+    Range("L1") = "Writing Score Categorized"
+    Range("L2").Formula = "=IF(H2<PERCENTILE(H$2:H$" & lastRow & ",0.33), ""poor"",IF(H2>PERCENTILE(H$2:H$" & lastRow & ",0.66),""good"", ""average""))"
+    Range("M1") = "Total Score Categorized"
+    Range("M2").Formula = "=IF(I2<PERCENTILE(I$2:I$" & lastRow & ",0.33), ""poor"",IF(I2>PERCENTILE(I$2:I$" & lastRow & ",0.66),""good"", ""average""))"
+    
+' Autofills new columns
+
+    Dim rng As Range
+    Set rng = Range("I2:M2")
+    rng.AutoFill Destination:=Range("I2:M" & lastRow)
+    
+' Filters first row so user can check for errors in data
+
+    Rows("1:1").Select
+    Selection.AutoFilter
+
+' Updates pivot table data source and refreshes
+    
+    Sheets("PivotTables").Select
+    Dim pt As PivotTable
+    Dim pc As PivotCache
+    Dim newDataSource As Range
+    Set newDataSource = Worksheets("WorkingData").Range("A1:M" & lastRow)
+    Set pt = Worksheets("PivotTables").PivotTables("PivotTable1")
+    Set pc = ThisWorkbook.PivotCaches.Create(xlDatabase, newDataSource)
+    pt.ChangePivotCache pc
+    pt.RefreshTable
+    Set pt = Worksheets("PivotTables").PivotTables("PivotTable2")
+    Set pc = ThisWorkbook.PivotCaches.Create(xlDatabase, newDataSource)
+    pt.ChangePivotCache pc
+    pt.RefreshTable
+    Set pt = Worksheets("PivotTables").PivotTables("PivotTable3")
+    Set pc = ThisWorkbook.PivotCaches.Create(xlDatabase, newDataSource)
+    pt.ChangePivotCache pc
+    pt.RefreshTable
+    
+' Brings user back to DataImport sheet
+    
+    Sheets("DataImport").Select
+
+End Sub
